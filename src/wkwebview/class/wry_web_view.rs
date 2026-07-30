@@ -57,6 +57,20 @@ define_class!(
     }
 
     #[cfg(target_os = "macos")]
+    #[unsafe(method(keyDown:))]
+    fn key_down(&self, event: &NSEvent) {
+      let keycode = unsafe { event.keyCode() };
+
+      // Arrow keys are handled by other event chains. Forwarding them to the
+      // superclass inserts their legacy C0 control characters into text fields.
+      if !(123..=126).contains(&keycode) {
+        unsafe {
+          let _: () = objc2::msg_send![super(self), keyDown: event];
+        }
+      }
+    }
+
+    #[cfg(target_os = "macos")]
     #[unsafe(method(acceptsFirstMouse:))]
     fn accept_first_mouse(&self, _event: &NSEvent) -> Bool {
       self.ivars().accept_first_mouse
