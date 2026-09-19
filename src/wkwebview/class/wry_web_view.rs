@@ -51,7 +51,12 @@ define_class!(
       // and stop propagating the event to the window, hence the menu shortcut won't be
       // triggered. However, overriding this method also means the cmd+key event won't be
       // handled in webview, which means the key cannot be listened by JavaScript.
-      if self.ivars().is_child {
+      let keycode = unsafe { event.keyCode() };
+
+      // Modified arrows are text-navigation commands, not window menu
+      // shortcuts. Let WebKit handle them so it retains the event context
+      // needed to extend or collapse selections normally.
+      if self.ivars().is_child && !(123..=126).contains(&keycode) {
         Bool::NO
       } else {
         unsafe { objc2::msg_send![super(self), performKeyEquivalent: event] }
