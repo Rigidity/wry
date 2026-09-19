@@ -9,6 +9,8 @@ use objc2::runtime::ProtocolObject;
 use objc2::{define_class, rc::Retained, runtime::Bool, DeclaredClass};
 #[cfg(target_os = "macos")]
 use objc2_app_kit::{NSDraggingDestination, NSEvent};
+#[cfg(target_os = "macos")]
+use objc2_foundation::NSArray;
 use objc2_foundation::{NSObjectProtocol, NSUUID};
 
 #[cfg(target_os = "ios")]
@@ -52,6 +54,25 @@ define_class!(
         Bool::NO
       } else {
         unsafe { objc2::msg_send![super(self), performKeyEquivalent: event] }
+      }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[unsafe(method(keyDown:))]
+    fn key_down(&self, event: &NSEvent) {
+      let keycode = unsafe { event.keyCode() };
+
+      if (123..=126).contains(&keycode) {
+        // WKWebView's keyDown implementation can insert the arrows' legacy C0
+        // control characters in child webviews. Interpret them as AppKit key
+        // bindings instead so they become movement and selection commands.
+        unsafe {
+          self.interpretKeyEvents(&NSArray::from_slice(&[event]));
+        }
+      } else {
+        unsafe {
+          let _: () = objc2::msg_send![super(self), keyDown: event];
+        }
       }
     }
 
